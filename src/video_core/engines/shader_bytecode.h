@@ -57,8 +57,8 @@ struct Register {
     }
 
     u64 GetSwizzledIndex(u64 elem) const {
-        elem = (value + elem) & 3;
-        return (value & ~3) + elem;
+        elem = (value + elem) & 3ull;
+        return (value & ~3ull) + elem;
     }
 
 private:

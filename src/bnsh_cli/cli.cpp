@@ -59,11 +59,10 @@ typedef struct CommonWord0 {
 
 typedef struct SPIRVData {
   std::vector<u32> spirv;
-  std::map<u32, ConstBuffer> cbufs;
   std::list<Sampler> samplers;
-  std::map<GlobalMemoryBase, GlobalMemoryUsage> global;
-  std::set<Attribute::Index> inputAttrs;
-  std::set<Attribute::Index> outputAttrs;
+  std::map<u32, ConstBuffer> constant_buffers;
+  std::set<Attribute::Index> input_attributes;
+  std::set<Attribute::Index> output_attributes;
 } SPIRVData;
 
 ShaderType ConvertSPHStageToYuzuStage(ShaderStage stage) {
@@ -84,51 +83,6 @@ ShaderType ConvertSPHStageToYuzuStage(ShaderStage stage) {
   return ShaderType::Compute;
 }
 
-ProgramCode LoadFileProgramCode(std::string& fileName) {
-  std::ifstream file(fileName, std::ios::ate | std::ios::binary);
-  if (!file.is_open()) throw std::runtime_error("Failed to open file!");
-
-  size_t fileSize = (size_t)file.tellg();
-
-  size_t bufferSize = (fileSize + sizeof(u64) - 1) / sizeof(u64);
-  ProgramCode buffer(bufferSize);
-
-  file.seekg(0);
-  file.read(reinterpret_cast<char*>(buffer.data()), fileSize);
-  file.close();
-
-  u32 magic = reinterpret_cast<u32*>(buffer.data())[0];
-
-  ProgramCode out = buffer;
-
-  // bnsh file, find bytecode section
-  if (magic == 0x48534E42) {
-    printf("Detected BNSH file\n");
-    u32* dataU32 = reinterpret_cast<u32*>(buffer.data());
-    u32 dataU32Len = (fileSize + sizeof(u32) - 1) / sizeof(u32);
-    u32 byteCodeOffset = 0x0;
-    for (int ii = 0; ii < dataU32Len; ++ii) {
-      if (dataU32[ii] == 0x12345678) {
-        // found bytecode section
-        if (byteCodeOffset != 0x0)
-          throw std::runtime_error(
-              "Unimplemented: Multiple BNSH bytecode sections aren't "
-              "unsupported");
-        byteCodeOffset = ii * sizeof(u32) + 0x30;
-      }
-    }
-    if (byteCodeOffset == 0x0)
-      throw std::runtime_error("Missing BNSH bytecode section");
-    u32 programCodeOffset = byteCodeOffset / sizeof(u64);
-    printf("Found BNSH bytecode at 0x%X\n", byteCodeOffset);
-    out = ProgramCode(
-        &buffer[programCodeOffset],
-        &buffer[programCodeOffset + bufferSize - programCodeOffset]);
-  }
-
-  return out;
-}
-
 Specialization GetSpecialization(uint32_t baseBindingIndex,
                                  std::vector<u8> customInputVaryings) {
   Specialization specialization{};
@@ -145,171 +99,88 @@ Specialization GetSpecialization(uint32_t baseBindingIndex,
 }
 
 DeviceSettings GetDeviceSettings() {
-  DeviceSettings deviceSettings{};
-  deviceSettings.IsFloat16Supported = false;
-  deviceSettings.IsWarpSizePotentiallyBiggerThanGuest = true;
-  deviceSettings.IsFormatlessImageLoadSupported = true;
-  deviceSettings.IsNvViewportSwizzleSupported = false;
-  deviceSettings.IsKhrUniformBufferStandardLayoutSupported = false;
-  deviceSettings.IsExtIndexTypeUint8Supported = false;
-  deviceSettings.IsExtDepthRangeUnrestrictedSupported = true;
-  deviceSettings.IsExtShaderViewportIndexLayerSupported = true;
-  deviceSettings.IsExtTransformFeedbackSupported = false;
-  deviceSettings.IsExtCustomBorderColorSupported = false;
-  deviceSettings.IsExtExtendedDynamicStateSupported = false;
-  return deviceSettings;
+  DeviceSettings device_settings{};
+  device_settings.IsFloat16Supported = false;
+  device_settings.IsWarpSizePotentiallyBiggerThanGuest = true;
+  device_settings.IsFormatlessImageLoadSupported = true;
+  device_settings.IsNvViewportSwizzleSupported = false;
+  device_settings.IsKhrUniformBufferStandardLayoutSupported = false;
+  device_settings.IsExtIndexTypeUint8Supported = false;
+  device_settings.IsExtDepthRangeUnrestrictedSupported = true;
+  device_settings.IsExtShaderViewportIndexLayerSupported = true;
+  device_settings.IsExtTransformFeedbackSupported = false;
+  device_settings.IsExtCustomBorderColorSupported = false;
+  device_settings.IsExtExtendedDynamicStateSupported = false;
+  return device_settings;
 }
 
-SPIRVData DecodeShader(std::string fileName,
-                       std::vector<u8> customInputVaryings,
-                       uint32_t baseBindingIndex) {
-  ProgramCode code = LoadFileProgramCode(fileName);
-
-  // extract shader stage
-  CommonWord0 commonWord0 = reinterpret_cast<CommonWord0*>(code.data())[0];
-  ShaderType stage = ConvertSPHStageToYuzuStage(commonWord0.Stage);
-
-  struct SerializedRegistryInfo registryInfo;
-  Registry registry(stage, registryInfo);
-
-  CompilerSettings settings{CompileDepth::FullDecompile};
-
-  ShaderIR shaderIR(code, 10, settings, registry);
-
-  Specialization specialization =
-      GetSpecialization(baseBindingIndex, customInputVaryings);
-
-  DeviceSettings deviceSettings = GetDeviceSettings();
-
-  std::vector<u32> spirv = VideoCommon::Shader::Decompile(
-      deviceSettings, shaderIR, stage, registry, specialization);
-
-  // IR data
-  std::map<u32, ConstBuffer> cbufs = shaderIR.GetConstantBuffers();
-  std::list<Sampler> samplers = shaderIR.GetSamplers();
-  std::map<GlobalMemoryBase, GlobalMemoryUsage> global =
-      shaderIR.GetGlobalMemory();
-  std::set<Attribute::Index> inputAttrs = shaderIR.GetInputAttributes();
-  std::set<Attribute::Index> outputAttrs = shaderIR.GetOutputAttributes();
-
-  SPIRVData out{};
-  out.spirv = spirv;
-  out.cbufs = cbufs;
-  out.global = global;
-  out.samplers = samplers;
-  out.inputAttrs = inputAttrs;
-  out.outputAttrs = outputAttrs;
-
-  return out;
-}
-
-void WriteFileSPIRV(std::string& file_name, std::vector<u32>& data) {
-  FILE* pFile;
-  pFile = fopen(file_name.c_str(), "w+b");
-  fwrite(data.data(), data.size(), sizeof(u32), pFile);
-  fclose(pFile);
-}
-
-void WriteFileJSON(std::string& file_name, SPIRVData& spirvData) {
+std::string GenerateJSON(SPIRVData& spirv_data) {
   std::string json = "";
   json += "{";
-  /*for (const auto& cbuf : spirvData.cbufs) {
-    dataCbufs.push_back(cbuf.first);
-  }*/
-  // write spirv data
+  // write constantBuffers
   {
-    json += "\"spirv\": [";
-    for (uint32_t ii = 0; ii < spirvData.spirv.size(); ++ii) {
-      json += std::to_string(spirvData.spirv.at(ii));
-      if (ii < spirvData.spirv.size() - 1) json += ",";
-    }
-    json += "]";
-  }
-  json += ",";
-  // write cbufs
-  {
-    json += "\"cbufs\": [";
+    json += "\"constantBuffers\":[";
     uint32_t counter = 0;
-    for (const auto& [index, size] : spirvData.cbufs) {
-      json += "{ ";
-      json += "\"index\": ";
+    for (const auto& [index, size] : spirv_data.constant_buffers) {
+      json += "{";
+      json += "\"index\":";
       json += std::to_string(index);
-      json += ", ";
-      json += "\"maxOffset\": ";
+      json += ",";
+      json += "\"maxOffset\":";
       json += std::to_string(size.GetMaxOffset());
-      json += ", ";
-      json += "\"size\": ";
+      json += ",";
+      json += "\"size\":";
       json += std::to_string(size.GetSize());
-      json += " }";
-      if (counter++ < spirvData.cbufs.size() - 1) json += ", ";
+      json += "}";
+      if (counter++ < spirv_data.constant_buffers.size() - 1) json += ",";
     }
     json += "]";
   }
   json += ",";
   // write samplers
   {
-    json += "\"samplers\": [";
+    json += "\"samplers\":[";
     uint32_t counter = 0;
-    for (const auto& sampler : spirvData.samplers) {
-      json += "{ ";
-      json += "\"index\": ";
+    for (const auto& sampler : spirv_data.samplers) {
+      json += "{";
+      json += "\"index\":";
       json += std::to_string(sampler.index);
-      json += ", ";
-      json += "\"offset\": ";
+      json += ",";
+      json += "\"offset\":";
       json += std::to_string(sampler.offset);
-      json += ", ";
-      json += "\"isShadow\": ";
+      json += ",";
+      json += "\"isShadow\":";
       json += std::to_string(sampler.is_shadow);
-      json += " }";
-      if (counter++ < spirvData.samplers.size() - 1) json += ", ";
-    }
-    json += "]";
-  }
-  json += ",";
-  // write global
-  {
-    json += "\"global\": [";
-    uint32_t counter = 0;
-    for (const auto& [base, usage] : spirvData.global) {
-      json += "{ ";
-      json += "\"index\": ";
-      json += std::to_string(base.cbuf_index);
-      json += ", ";
-      json += "\"offset\": ";
-      json += std::to_string(base.cbuf_offset);
-      json += " }";
-      if (counter++ < spirvData.global.size() - 1) json += ", ";
+      json += "}";
+      if (counter++ < spirv_data.samplers.size() - 1) json += ",";
     }
     json += "]";
   }
   json += ",";
   // input attributes
   {
-    json += "\"inputAttributes\": [";
+    json += "\"inputAttributes\":[";
     uint32_t counter = 0;
-    for (const auto& attr : spirvData.inputAttrs) {
+    for (const auto& attr : spirv_data.input_attributes) {
       json += std::to_string(static_cast<u64>(attr));
-      if (counter++ < spirvData.inputAttrs.size() - 1) json += ", ";
+      if (counter++ < spirv_data.input_attributes.size() - 1) json += ",";
     }
     json += "]";
   }
   json += ",";
   // output attributes
   {
-    json += "\"outputAttributes\": [";
+    json += "\"outputAttributes\":[";
     uint32_t counter = 0;
-    for (const auto& attr : spirvData.outputAttrs) {
+    for (const auto& attr : spirv_data.output_attributes) {
       json += std::to_string(static_cast<u64>(attr));
-      if (counter++ < spirvData.outputAttrs.size() - 1) json += ", ";
+      if (counter++ < spirv_data.output_attributes.size() - 1) json += ",";
     }
     json += "]";
   }
   json += "}";
-  // save json file
-  FILE* pFile;
-  pFile = fopen(file_name.c_str(), "w+b");
-  fwrite(json.c_str(), json.size(), sizeof(char), pFile);
-  fclose(pFile);
+  json += "\0";
+  return json;
 }
 
 }  // namespace
@@ -327,78 +198,52 @@ void printUsage() {
 }
 
 extern "C" {
-  int EMSCRIPTEN_KEEPALIVE Decode(char* cmd) {
-    int argc = 0;
-    char *argv[512];
-    char *p2 = strtok(cmd, " ");
-    while (p2 && argc < 512-1) {
-      argv[argc++] = p2;
-      p2 = strtok(0, " ");
-    }
-    argv[argc] = 0;
 
-    std::vector<std::string> args(argv + 1, argv + argc);
+  const char* EMSCRIPTEN_KEEPALIVE Decode(
+    uint32_t len_raw_data, u64* raw_data,
+    uint8_t base_binding_index,
+    uint32_t len_raw_input_varyings, uint8_t* raw_input_varyings,
+    u64* spirv_out
+  ) {
+    ProgramCode code(raw_data, raw_data + len_raw_data / sizeof(u64));
+    std::vector<uint8_t> input_varyings(raw_input_varyings, raw_input_varyings + len_raw_input_varyings);
 
-    std::string inputName;
-    std::string outputName;
-    uint32_t baseBindingIndex = 0;
-    std::vector<u8> customInputVaryings{};
+    // extract shader stage
+    CommonWord0 common_word_0 = reinterpret_cast<CommonWord0*>(code.data())[0];
+    ShaderType stage = ConvertSPHStageToYuzuStage(common_word_0.Stage);
 
-    bool outputJSON = true;
-    for (auto arg = args.begin(); arg != args.end(); ++arg) {
-      if (*arg == "-h" || *arg == "--help") {
-        printUsage();
-        return EXIT_SUCCESS;
-      } else if (*arg == "-i" || *arg == "--input") {
-        inputName = *(arg + 1);
-      } else if (*arg == "-o" || *arg == "--output") {
-        outputName = *(arg + 1);
-      } else if (*arg == "--json") {
-        outputJSON = true;
-      } else if (*arg == "--base-binding-index") {
-        baseBindingIndex = std::stoi(*(arg + 1), nullptr, 0);
-      } else if (*arg == "--input-varyings") {
-        std::string arr = (*(arg + 1));
-        if (arr[0] != '[' || arr[arr.size() - 1] != ']') {
-          printf("Input varyings parse error\n");
-          return EXIT_FAILURE;
-        }
-        // extract varying locations
-        char num_buf[8] = {};
-        u8 buf_index = 0;
-        for (u8 ii = 1; ii < arr.size(); ++ii) {
-          if (arr[ii] == ',' || arr[ii] == ']') {
-            customInputVaryings.push_back(std::stoi(num_buf, nullptr, 0));
-            // reset number buffer
-            memset(&num_buf, 0, sizeof(num_buf));
-            buf_index = 0;
-          } else {
-            num_buf[buf_index++] = arr[ii];
-          }
-        }
-      }
-    }
+    struct SerializedRegistryInfo registry_info;
+    Registry registry(stage, registry_info);
 
-    if (!inputName.size() && !outputName.size()) {
-      printUsage();
-      return EXIT_FAILURE;
-    }
+    CompilerSettings settings{CompileDepth::FullDecompile};
 
-    if (inputName.size()) {
-      if (outputJSON) {
-        SPIRVData spirvData =
-            DecodeShader(inputName, customInputVaryings, baseBindingIndex);
-        //printf("Successfully decoded\n");
-        WriteFileJSON(outputName, spirvData);
-      } else if (outputName.size()) {
-        SPIRVData spirvData =
-            DecodeShader(inputName, customInputVaryings, baseBindingIndex);
-        //printf("Successfully decoded\n");
-        WriteFileSPIRV(outputName, spirvData.spirv);
-      }
-    }
+    ShaderIR shader_ir(code, 10, settings, registry);
 
-    return EXIT_SUCCESS;
+    Specialization specialization =
+        GetSpecialization(base_binding_index, input_varyings);
+
+    DeviceSettings device_settings = GetDeviceSettings();
+
+    std::vector<u32> spirv = VideoCommon::Shader::Decompile(
+        device_settings, shader_ir, stage, registry, specialization);
+
+    SPIRVData out_data{};
+    out_data.spirv = spirv;
+    out_data.samplers = shader_ir.GetSamplers();
+    out_data.constant_buffers = shader_ir.GetConstantBuffers();
+    out_data.input_attributes = shader_ir.GetInputAttributes();
+    out_data.output_attributes = shader_ir.GetOutputAttributes();
+
+    printf("spirv[6]: %i\n", spirv[6]);
+    printf("spirv[8]: %i\n", spirv[8]);
+    printf("spirv[10]: %i\n", spirv[10]);
+    // pos 0 is reserved to contain the spirv data length
+    spirv_out[0] = spirv.size();
+    // copy spirv data to outer world
+    memcpy(&spirv_out[1], spirv.data(), spirv.size() * sizeof(spirv[0]));
+
+    std::string json = GenerateJSON(out_data);
+    return json.c_str();
   }
 
 }

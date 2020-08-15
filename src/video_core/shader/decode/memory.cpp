@@ -157,7 +157,7 @@ u32 ShaderIR::DecodeMemory(NodeBlock& bb, u32 pc) {
         Node index = GetRegister(instr.gpr8);
 
         const Node op_a =
-            GetConstBufferIndirect(instr.cbuf36.index, instr.cbuf36.GetOffset() + 0, index);
+            GetConstBufferIndirect(instr.cbuf36.index, (u64) (instr.cbuf36.GetOffset() + (s64)0), index);
 
         switch (instr.ld_c.type.Value()) {
         case Tegra::Shader::UniformType::Single:
@@ -166,7 +166,7 @@ u32 ShaderIR::DecodeMemory(NodeBlock& bb, u32 pc) {
 
         case Tegra::Shader::UniformType::Double: {
             const Node op_b =
-                GetConstBufferIndirect(instr.cbuf36.index, instr.cbuf36.GetOffset() + 4, index);
+                GetConstBufferIndirect(instr.cbuf36.index, (u64) (instr.cbuf36.GetOffset() + (s64)4), index);
 
             SetTemporary(bb, 0, op_a);
             SetTemporary(bb, 1, op_b);
@@ -215,7 +215,7 @@ u32 ShaderIR::DecodeMemory(NodeBlock& bb, u32 pc) {
                 }
             }();
             for (u32 i = 0; i < count; ++i) {
-                SetTemporary(bb, i, GetMemory(i * 4));
+                SetTemporary(bb, i, GetMemory((s32) i * 4ll));
             }
             for (u32 i = 0; i < count; ++i) {
                 SetRegister(bb, instr.gpr0.Value() + i, GetTemporary(i));

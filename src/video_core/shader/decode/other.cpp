@@ -143,11 +143,11 @@ u32 ShaderIR::DecodeOther(NodeBlock& bb, u32 pc) {
     case OpCode::Id::BRA: {
         Node branch;
         if (instr.bra.constant_buffer == 0) {
-            const u32 target = pc + instr.bra.GetBranchTarget();
+            const u32 target = pc + (u32)instr.bra.GetBranchTarget();
             branch = Operation(OperationCode::Branch, Immediate(target));
         } else {
             const u32 target = pc + 1;
-            const Node op_a = GetConstBuffer(instr.cbuf36.index, instr.cbuf36.GetOffset());
+            const Node op_a = GetConstBuffer(instr.cbuf36.index, (u64)instr.cbuf36.GetOffset());
             const Node convert = SignedOperation(OperationCode::IArithmeticShiftRight, true,
                                                  PRECISE, op_a, Immediate(3));
             const Node operand =
