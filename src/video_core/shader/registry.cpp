@@ -49,6 +49,7 @@ ComputeInfo MakeComputeInfo(ShaderType shader_stage, ConstBufferEngineInterface&
     info.local_memory_size_in_words = launch.local_pos_alloc;
     info.shared_memory_size_in_words = launch.shared_alloc;
     return info;*/
+    printf("Missing: MakeComputeInfo\n");
     return {};
 }
 

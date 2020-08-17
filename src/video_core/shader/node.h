@@ -430,8 +430,8 @@ public:
     }
 
 private:
-    static constexpr std::size_t amend_null_index = static_cast<std::size_t>(0xFFFFFFFFFFFFFFFFULL);
-    std::size_t amend_index{amend_null_index};
+    static constexpr u64 amend_null_index = 0xFFFFFFFFFFFFFFFFULL;
+    u64 amend_index{amend_null_index};
 };
 
 /// Holds any kind of operation that can be done in the IR

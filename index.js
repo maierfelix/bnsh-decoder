@@ -6,7 +6,7 @@ function initModule() {
   WasmModule = require("./build/src/bnsh_cli/CLI.js");
   Module = {};
   WasmModule(Module);
-  SpirvBuffer = Module._malloc(0x4000 * Uint32Array.BYTES_PER_ELEMENT);
+  SpirvBuffer = mallocBuffer(new Uint8Array(0x4000 * Uint32Array.BYTES_PER_ELEMENT));
 };
 // create module on creation
 initModule();
@@ -66,7 +66,7 @@ module.exports.decode = function(data, baseBindingIndex = 0, inputVaryings = [])
     // input_varyings
     inputVaryingsBuffer.length, inputVaryingsBuffer.pointer,
     // spirv destination pointer
-    SpirvBuffer
+    SpirvBuffer.pointer
   ];
   let args_signature = [
     "number", "number",
@@ -90,21 +90,21 @@ module.exports.decode = function(data, baseBindingIndex = 0, inputVaryings = [])
   }
 
   // copy spirv buffer out of the heap back into js land
-  let spirvLength = Module.HEAPU32[(SpirvBuffer + 0x0) >> 2];
-  let spirvData = new Uint32Array(spirvLength);
-  spirvData.set(
-    Module.HEAPU32.subarray((SpirvBuffer + 0x8) >> 2, (SpirvBuffer + 0x8 + spirvLength) >> 2),
-    0x0
+  let spirvLength = json.spirvLength;
+  let spirvMemoryChunk = Module.HEAPU32.subarray(
+    SpirvBuffer.pointer >> 2,
+    (SpirvBuffer.pointer >> 2) + spirvLength
   );
+
+  // make heap copy of spirv
+  let spirv = new Uint32Array(spirvLength);
+  spirv.set(spirvMemoryChunk, 0x0);
 
   Module._free(dataBuffer.pointer);
   Module._free(inputVaryingsBuffer.pointer);
 
-  json.spirv = spirvData;
+  // save spirv copy into json
+  json.spirv = spirv;
+
   return json;
 };
-/*
-let baseBindingIndex = 0;
-let inputVaryings = new Uint8Array([1, 2, 3, 4]);
-let result = module.exports.decode(data, baseBindingIndex, inputVaryings);
-*/

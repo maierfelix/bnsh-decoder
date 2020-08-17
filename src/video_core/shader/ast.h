@@ -5,7 +5,7 @@
 #pragma once
 
 #include <functional>
-//#include <list>
+#include <list>
 #include <memory>
 #include <optional>
 #include <string>
@@ -390,7 +390,7 @@ private:
     std::unordered_map<u32, u32> labels_map{};
     u32 labels_count{};
     std::vector<ASTNode> labels{};
-    std::vector<ASTNode> gotos{};
+    std::list<ASTNode> gotos{};
     u32 variables{};
     ASTProgram* program{};
     ASTNode main_node{};

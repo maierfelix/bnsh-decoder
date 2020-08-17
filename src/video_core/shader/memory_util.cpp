@@ -58,22 +58,25 @@ std::size_t CalculateProgramSize(const ProgramCode& program, bool is_compute) {
 
 ProgramCode GetShaderCode(Tegra::MemoryManager& memory_manager, GPUVAddr gpu_addr,
                           const u8* host_ptr, bool is_compute) {
-    ProgramCode code(VideoCommon::Shader::MAX_PROGRAM_LENGTH);
-    /*ASSERT_OR_EXECUTE(host_ptr != nullptr, { return code; });
+    /*ProgramCode code(VideoCommon::Shader::MAX_PROGRAM_LENGTH);
+    ASSERT_OR_EXECUTE(host_ptr != nullptr, { return code; });
     memory_manager.ReadBlockUnsafe(gpu_addr, code.data(), code.size() * sizeof(u64));
-    code.resize(CalculateProgramSize(code, is_compute));*/
-    return code;
+    code.resize(CalculateProgramSize(code, is_compute));
+    return code;*/
+    printf("Missing: GetShaderCode\n");
+    return {};
 }
 
 u64 GetUniqueIdentifier(Tegra::Engines::ShaderType shader_type, bool is_a, const ProgramCode& code,
                         const ProgramCode& code_b) {
+    printf("Missing: GetUniqueIdentifier\n");
     /*size_t unique_identifier = boost::hash_value(code);
     if (is_a) {
         // VertexA programs include two programs
         boost::hash_combine(unique_identifier, boost::hash_value(code_b));
     }
     return static_cast<u64>(unique_identifier);*/
-    return 1337;
+    return 0;
 }
 
 } // namespace VideoCommon::Shader

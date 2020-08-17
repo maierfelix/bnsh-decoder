@@ -1184,6 +1184,7 @@ private:
             }
             const auto operation_index = static_cast<std::size_t>(operation->GetCode());
             const auto decompiler = operation_decompilers[operation_index];
+
             if (decompiler == nullptr) {
                 UNREACHABLE_MSG("Operation decompiler {} not defined", operation_index);
             }

@@ -65,7 +65,7 @@ u32 ShaderIR::DecodeArithmetic(NodeBlock& bb, u32 pc) {
 
         if (instr.fmul.postfactor != 0) {
             op_a = Operation(OperationCode::FMul, NO_PRECISE, op_a,
-                             Immediate(FmulPostFactor[static_cast<u32>(instr.fmul.postfactor)]));
+                             Immediate(FmulPostFactor[(u32)instr.fmul.postfactor]));
         }
 
         // TODO(Rodrigo): Should precise be used when there's a postfactor?

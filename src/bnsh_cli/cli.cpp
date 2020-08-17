@@ -12,7 +12,9 @@
 #include "video_core/shader/shader_ir.h"
 #include "video_core/shader/spirv_decompiler.h"
 
+#ifdef EMSCRIPTEN
 #include <emscripten.h>
+#endif
 
 namespace {
 
@@ -117,6 +119,12 @@ DeviceSettings GetDeviceSettings() {
 std::string GenerateJSON(SPIRVData& spirv_data) {
   std::string json = "";
   json += "{";
+  // write spirv length
+  {
+    json += "\"spirvLength\":";
+    json += std::to_string(spirv_data.spirv.size());
+  }
+  json += ",";
   // write constantBuffers
   {
     json += "\"constantBuffers\":[";
@@ -197,15 +205,17 @@ void printUsage() {
           "  --input-varyings      Specify custom input varyings.\n");
 }
 
+#ifdef EMSCRIPTEN
 extern "C" {
 
   const char* EMSCRIPTEN_KEEPALIVE Decode(
     uint32_t len_raw_data, u64* raw_data,
     uint8_t base_binding_index,
     uint32_t len_raw_input_varyings, uint8_t* raw_input_varyings,
-    u64* spirv_out
+    u32* spirv_out
   ) {
     ProgramCode code(raw_data, raw_data + len_raw_data / sizeof(u64));
+
     std::vector<uint8_t> input_varyings(raw_input_varyings, raw_input_varyings + len_raw_input_varyings);
 
     // extract shader stage
@@ -234,16 +244,19 @@ extern "C" {
     out_data.input_attributes = shader_ir.GetInputAttributes();
     out_data.output_attributes = shader_ir.GetOutputAttributes();
 
-    printf("spirv[6]: %i\n", spirv[6]);
-    printf("spirv[8]: %i\n", spirv[8]);
-    printf("spirv[10]: %i\n", spirv[10]);
-    // pos 0 is reserved to contain the spirv data length
-    spirv_out[0] = spirv.size();
     // copy spirv data to outer world
-    memcpy(&spirv_out[1], spirv.data(), spirv.size() * sizeof(spirv[0]));
+    memcpy(&spirv_out[0], spirv.data(), spirv.size() * sizeof(spirv[0]));
 
     std::string json = GenerateJSON(out_data);
     return json.c_str();
   }
 
 }
+#else
+
+int main(int argc, char* argv[]) {
+  printf("MAIN\n");
+  return EXIT_SUCCESS;
+}
+
+#endif

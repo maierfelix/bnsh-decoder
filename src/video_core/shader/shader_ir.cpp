@@ -29,7 +29,7 @@ ShaderIR::ShaderIR(const ProgramCode& program_code, u32 main_offset, CompilerSet
                    Registry& registry)
     : program_code{program_code}, main_offset{main_offset}, settings{settings}, registry{registry} {
     Decode();
-    //PostDecode();
+    PostDecode();
 }
 
 ShaderIR::~ShaderIR() = default;
@@ -433,7 +433,7 @@ void ShaderIR::MarkAttributeUsage(Attribute::Index index, u64 element) {
     case Attribute::Index::ClipDistances0123:
     case Attribute::Index::ClipDistances4567: {
         const u64 clip_index = (index == Attribute::Index::ClipDistances4567 ? 4 : 0) + element;
-        used_clip_distances.at(static_cast<u32>(clip_index)) = true;
+        used_clip_distances.at((u32)clip_index) = true;
         break;
     }
     case Attribute::Index::FrontColor:

@@ -142,20 +142,32 @@ void FmtLogMessageImpl(Class log_class, Level log_level, const char* filename,
 template <typename... Args>
 void FmtLogMessage(Class log_class, Level log_level, const char* filename, unsigned int line_num,
                    const char* function, const char* format, const Args&... args) {
-    /*FmtLogMessageImpl(log_class, log_level, filename, line_num, function, format,
-                      fmt::make_format_args(args...));*/
+    //FmtLogMessageImpl(log_class, log_level, filename, line_num, function, format,
+    //                  fmt::make_format_args(args...));
 }
 
 } // namespace Log
 
 #ifdef _DEBUG
-#define LOG_TRACE(log_class, ...)
+#define LOG_TRACE(log_class, ...)                                                                  \
+    ::Log::FmtLogMessage(::Log::Class::log_class, ::Log::Level::Trace,                             \
+                         ::Log::TrimSourcePath(__FILE__), __LINE__, __func__, __VA_ARGS__)
 #else
 #define LOG_TRACE(log_class, fmt, ...) (void(0))
 #endif
 
-#define LOG_DEBUG(log_class, ...) (void(0))
-#define LOG_INFO(log_class, ...) (void(0))
-#define LOG_WARNING(log_class, ...) (void(0))
-#define LOG_ERROR(log_class, ...) (void(0))
-#define LOG_CRITICAL(log_class, ...) (void(0))
+#define LOG_DEBUG(log_class, ...)                                                                  \
+    ::Log::FmtLogMessage(::Log::Class::log_class, ::Log::Level::Debug,                             \
+                         ::Log::TrimSourcePath(__FILE__), __LINE__, __func__, __VA_ARGS__)
+#define LOG_INFO(log_class, ...)                                                                   \
+    ::Log::FmtLogMessage(::Log::Class::log_class, ::Log::Level::Info,                              \
+                         ::Log::TrimSourcePath(__FILE__), __LINE__, __func__, __VA_ARGS__)
+#define LOG_WARNING(log_class, ...)                                                                \
+    ::Log::FmtLogMessage(::Log::Class::log_class, ::Log::Level::Warning,                           \
+                         ::Log::TrimSourcePath(__FILE__), __LINE__, __func__, __VA_ARGS__)
+#define LOG_ERROR(log_class, ...)                                                                  \
+    ::Log::FmtLogMessage(::Log::Class::log_class, ::Log::Level::Error,                             \
+                         ::Log::TrimSourcePath(__FILE__), __LINE__, __func__, __VA_ARGS__)
+#define LOG_CRITICAL(log_class, ...)                                                               \
+    ::Log::FmtLogMessage(::Log::Class::log_class, ::Log::Level::Critical,                          \
+                         ::Log::TrimSourcePath(__FILE__), __LINE__, __func__, __VA_ARGS__)

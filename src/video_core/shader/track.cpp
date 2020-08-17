@@ -18,7 +18,7 @@ namespace {
 std::pair<Node, s64> FindOperation(const NodeBlock& code, s64 cursor,
                                    OperationCode operation_code) {
     for (; cursor >= 0; --cursor) {
-        Node node = code.at(static_cast<s32>(cursor));
+        Node node = code.at((u32)cursor);
 
         if (const auto operation = std::get_if<OperationNode>(&*node)) {
             if (operation->GetCode() == operation_code) {
@@ -153,7 +153,7 @@ std::pair<Node, TrackSampler> ShaderIR::HandleBindlessIndirectRead(
     Node cv_node = GetCustomVariable(bindless_cv);
     Node amend_op = Operation(OperationCode::Assign, std::move(cv_node), std::move(op));
     const std::size_t amend_index = DeclareAmend(std::move(amend_op));
-    AmendNodeCv(amend_index, code[static_cast<s32>(cursor)]);
+    AmendNodeCv(amend_index, code[(u32)cursor]);
 
     // TODO: Implement bindless index custom variable
     auto track =
