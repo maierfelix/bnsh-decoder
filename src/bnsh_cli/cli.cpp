@@ -208,11 +208,12 @@ void printUsage() {
 #ifdef EMSCRIPTEN
 extern "C" {
 
-  const char* EMSCRIPTEN_KEEPALIVE Decode(
+  void EMSCRIPTEN_KEEPALIVE Decode(
     uint32_t len_raw_data, u64* raw_data,
     uint8_t base_binding_index,
     uint32_t len_raw_input_varyings, uint8_t* raw_input_varyings,
-    u32* spirv_out
+    u32* spirv_out,
+    char* json_out
   ) {
     ProgramCode code(raw_data, raw_data + len_raw_data / sizeof(u64));
 
@@ -248,7 +249,7 @@ extern "C" {
     memcpy(&spirv_out[0], spirv.data(), spirv.size() * sizeof(spirv[0]));
 
     std::string json = GenerateJSON(out_data);
-    return json.c_str();
+    strncpy(json_out, json.c_str(), json.size());
   }
 
 }

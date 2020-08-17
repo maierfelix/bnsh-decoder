@@ -1,12 +1,13 @@
 let Module = {};
 let WasmModule = null;
-let SpirvBuffer = null;
+let JsonStringBuffer = null;
 
 function initModule() {
   WasmModule = require("./build/src/bnsh_cli/CLI.js");
   Module = {};
   WasmModule(Module);
-  SpirvBuffer = mallocBuffer(new Uint8Array(0x4000 * Uint32Array.BYTES_PER_ELEMENT));
+  SpirvBuffer = mallocBuffer(new Uint8Array(0x8000 * Uint32Array.BYTES_PER_ELEMENT));
+  JsonStringBuffer = mallocBuffer(new Uint8Array(0x1000 * Uint8Array.BYTES_PER_ELEMENT));
 };
 // create module on creation
 initModule();
@@ -24,6 +25,7 @@ module.exports.destroy = function() {
   Module = null;
   WasmModule = null;
   SpirvBuffer = null;
+  JsonStringBuffer = null;
 };
 
 module.exports.decode = function(data, baseBindingIndex = 0, inputVaryings = []) {
@@ -66,7 +68,9 @@ module.exports.decode = function(data, baseBindingIndex = 0, inputVaryings = [])
     // input_varyings
     inputVaryingsBuffer.length, inputVaryingsBuffer.pointer,
     // spirv destination pointer
-    SpirvBuffer.pointer
+    SpirvBuffer.pointer,
+    // json string destination pointer
+    JsonStringBuffer.pointer
   ];
   let args_signature = [
     "number", "number",
@@ -75,17 +79,21 @@ module.exports.decode = function(data, baseBindingIndex = 0, inputVaryings = [])
     "number"
   ];
 
-  let result = Module.ccall("Decode",	"number", args_signature, args);
+  Module.ccall("Decode",	"number", args_signature, args);
   // decode json string
   let json = null;
   {
-    let stringBuffer = Module.HEAPU8.subarray(result);
     let stringLength = 0x1000;
-    for (let ii = 0; ii < 0x1000; ++ii) {
-      let cc = stringBuffer[ii];
+    let jsonStringMemoryChunk = Module.HEAPU8.subarray(
+      JsonStringBuffer.pointer,
+      JsonStringBuffer.pointer + stringLength
+    );
+    for (let ii = 0; ii < stringLength; ++ii) {
+      let cc = jsonStringMemoryChunk[ii];
       if (cc === 0) { stringLength = ii; break; }
     };
-    let jsonString = new TextDecoder("utf-8").decode(stringBuffer.subarray(0, stringLength));
+    let jsonString = new TextDecoder("utf-8").decode(jsonStringMemoryChunk.subarray(0, stringLength));
+    jsonStringMemoryChunk.fill(0);
     json = JSON.parse(jsonString);
   }
 
