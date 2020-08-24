@@ -1,6 +1,11 @@
 {
   "name": "bnsh-decoder",
   "version": "1.0.0",
-  "main": "index.js",
-  "license": "MIT"
+  "main": "dist/bundle.js",
+  "license": "MIT",
+  "devDependencies": {
+    "rollup": "^2.26.4",
+    "rollup-plugin-commonjs": "^10.1.0",
+    "rollup-plugin-node-resolve": "^5.2.0"
+  }
 }

@@ -1,5 +1,6 @@
 let Module = {};
 let WasmModule = null;
+let SpirvBuffer = null;
 let JsonStringBuffer = null;
 
 function initModule() {
