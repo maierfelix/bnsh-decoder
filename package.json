@@ -7,5 +7,19 @@
     "rollup": "^2.26.4",
     "rollup-plugin-commonjs": "^10.1.0",
     "rollup-plugin-node-resolve": "^5.2.0"
-  }
+  },
+  "dependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maierfelix/bnsh-decoder.git"
+  },
+  "author": "",
+  "bugs": {
+    "url": "https://github.com/maierfelix/bnsh-decoder/issues"
+  },
+  "homepage": "https://github.com/maierfelix/bnsh-decoder#readme",
+  "description": ""
 }
