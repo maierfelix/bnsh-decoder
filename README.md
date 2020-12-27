@@ -15,7 +15,7 @@ Decoding a BNSH shader results in 2 files:
  
 In order to decode a BNSH shader, run for example:
 ````
-bnsh_decoder --input shader.bnsh_fsh --output-json shader.json --output-spirv shader.spv
+bnsh-decoder --input shader.bnsh_fsh --output-json shader.json --output-spirv shader.spv
 ````
 
 In order to convert the resulting SPIR-V into GLSL, you can use the spirv-cross tool that is part of the binary, for example:
