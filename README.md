@@ -7,6 +7,22 @@ In order to extract information such as driver jump tables for bindless textures
 
 Also note that at the moment for each texture slot, an individual sampler slot is associated since WebGPU doesn't support combined image samplers.
 
+## Usage
+
+Decoding a BNSH shader results in 2 files:
+ - A .json file containing additional information about the resource layout of the shader
+ - A .spv file which contains the actual SPIR-V shader code
+ 
+In order to decode a BNSH shader, run for example:
+````
+bnsh_decoder --input shader.bnsh_fsh --output-json shader.json --output-spirv shader.spv
+````
+
+In order to convert the resulting SPIR-V into GLSL, you can use the spirv-cross tool that is part of the binary, for example:
+````
+spirv-cross shader.spv --output shader.glsl
+````
+
 ## Run BNSH shaders on desktop:
 
 Games like LGPE use bindless textures in mostly every shader.
@@ -29,10 +45,6 @@ function getSamplerBindingIndices(str, slt, smp) {
   return out;
 };
 ````
-
-## Compile for desktop:
-
-This tool was meant to be compiled with Emscripten, however only very little changes in the cmake are required to run this tool on desktop.
 
 ## Further notes:
 
