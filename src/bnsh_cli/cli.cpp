@@ -304,6 +304,13 @@ ProgramCode LoadFileProgramCode(std::string& fileName) {
     printf("Found BNSH bytecode at 0x%X\n", byteCodeOffset);
     out = ProgramCode(buffer.begin() + programCodeOffset, buffer.end());
   }
+  // got directly fed the binary section
+  else if (magic == 0x12345678) {
+    out = buffer;
+  }
+  else {
+    throw std::runtime_error("Unsupported data");
+  }
 
   return out;
 }
