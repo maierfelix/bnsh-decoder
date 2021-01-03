@@ -7,6 +7,12 @@ In order to extract information such as driver jump tables for bindless textures
 
 Also note that at the moment for each texture slot, an individual sampler slot is associated since WebGPU doesn't support combined image samplers.
 
+## Demo
+
+<a href="https://i.imgur.com/HK85gTQ.mp4">
+  <img src="https://i.imgur.com/HK85gTQ.gif" width="35%">
+</a>
+
 ## Usage
 
 Decoding a BNSH shader results in 2 files:
