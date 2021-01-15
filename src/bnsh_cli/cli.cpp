@@ -268,7 +268,10 @@ void PrintUsage() {
 
 ProgramCode LoadFileProgramCode(std::string& fileName) {
   std::ifstream file(fileName, std::ios::ate | std::ios::binary);
-  if (!file.is_open()) throw std::runtime_error("Failed to open file!");
+  if (!file.is_open()) {
+    fprintf(stderr, "Failed to open file!\n");
+    std::exit(EXIT_FAILURE);
+  }
 
   size_t fileSize = (size_t)file.tellg();
 
@@ -285,23 +288,26 @@ ProgramCode LoadFileProgramCode(std::string& fileName) {
 
   // bnsh file, find bytecode section
   if (magic == 0x48534E42) {
-    printf("Detected BNSH file\n");
+    fprintf(stdout, "Detected BNSH file\n");
     u32* dataU32 = reinterpret_cast<u32*>(buffer.data());
     u32 dataU32Len = (fileSize + sizeof(u32) - 1) / sizeof(u32);
     u32 byteCodeOffset = 0x0;
     for (int ii = 0; ii < dataU32Len; ++ii) {
       if (dataU32[ii] == 0x12345678) {
         // found bytecode section
-        if (byteCodeOffset != 0x0)
-          throw std::runtime_error(
-            "Unimplemented: Multiple BNSH bytecode sections aren't unsupported");
+        if (byteCodeOffset != 0x0) {
+          fprintf(stdout, "Multiple BNSH bytecode sections aren't supported, falling back to first detected BNSH bytecode code section\n");
+          break;
+        }
         byteCodeOffset = ii * sizeof(u32) + 0x30;
       }
     }
-    if (byteCodeOffset == 0x0)
-      throw std::runtime_error("Missing BNSH bytecode section");
+    if (byteCodeOffset == 0x0) {
+      fprintf(stderr, "Missing BNSH bytecode section\n");
+      std::exit(EXIT_FAILURE);
+    }
     u32 programCodeOffset = byteCodeOffset / sizeof(u64);
-    printf("Found BNSH bytecode at 0x%X\n", byteCodeOffset);
+    fprintf(stdout, "Found BNSH bytecode at 0x%X\n", byteCodeOffset);
     out = ProgramCode(buffer.begin() + programCodeOffset, buffer.end());
   }
   // got directly fed the binary section
@@ -309,7 +315,8 @@ ProgramCode LoadFileProgramCode(std::string& fileName) {
     out = buffer;
   }
   else {
-    throw std::runtime_error("Unsupported data");
+    fprintf(stderr, "Unsupported data\n");
+    std::exit(EXIT_FAILURE);
   }
 
   return out;
@@ -344,7 +351,7 @@ int main(int argc, char* argv[]) {
     else if (*arg == "--input-varyings") {
       std::string arr = (*(arg + 1));
       if (arr[0] != '[' || arr[arr.size() - 1] != ']') {
-        printf("Input varyings parse error\n");
+        fprintf(stdout, "Input varyings parse error\n");
         return EXIT_FAILURE;
       }
       // extract varying locations
@@ -397,7 +404,7 @@ int main(int argc, char* argv[]) {
       fclose(pFile);
     }
 
-    printf("Successfully decoded\n");
+    fprintf(stdout, "Successfully decoded\n");
   }
 
   return EXIT_SUCCESS;
